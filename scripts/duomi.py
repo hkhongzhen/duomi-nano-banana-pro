@@ -226,10 +226,78 @@ IMG_EXT = (".png", ".jpg", ".jpeg", ".webp", ".gif")
 VID_EXT = (".mp4", ".mov", ".webm")
 
 
+GPT_RATIOS = ("1:1", "3:2", "2:3", "16:9", "9:16", "1:2", "2:1", "4:3", "3:4", "5:4", "4:5")
+GPT_PRESETS = ("1024x1024", "1792x1024", "1024x1792")
+MIN_PX, MAX_PX, MAX_SIDE = 655_360, 8_294_400, 3840
+RES_LONG_EDGE = {"1k": 1024, "2k": 2048, "4k": 3840}
+
+
+def check_wh(w, h):
+    """官方限制：每边 16–3840 且能被 16 整除；总像素 655,360–8,294,400。"""
+    if w % 16 or h % 16:
+        sys.exit(f"尺寸 {w}x{h} 不合法：宽高都必须能被 16 整除")
+    if not (16 <= w <= MAX_SIDE and 16 <= h <= MAX_SIDE):
+        sys.exit(f"尺寸 {w}x{h} 不合法：每条边必须在 16–{MAX_SIDE}")
+    if not (MIN_PX <= w * h <= MAX_PX):
+        sys.exit(f"尺寸 {w}x{h} 不合法：总像素 {w*h:,} 须在 {MIN_PX:,}–{MAX_PX:,}")
+
+
+def size_from_resolution(res, ratio):
+    """按长边（1k=1024 / 2k=2048 / 4k=3840）和比例算出合法 WxH；超出像素预算时等比缩放。"""
+    import math
+    rw, rh = (int(x) for x in ratio.split(":"))
+    long_edge = RES_LONG_EDGE[res]
+    if rw >= rh:
+        w, h = long_edge, long_edge * rh / rw
+    else:
+        h, w = long_edge, long_edge * rw / rh
+    px = w * h
+    if px > MAX_PX:
+        k = math.sqrt(MAX_PX / px)
+        w, h = w * k, h * k
+    elif px < MIN_PX:
+        k = math.sqrt(MIN_PX / px)
+        w, h = w * k, h * k
+    # 先向下取 16 的倍数；若因此低于下限则向上取
+    fw, fh = int(w // 16) * 16, int(h // 16) * 16
+    if fw * fh < MIN_PX:
+        fw, fh = math.ceil(w / 16) * 16, math.ceil(h / 16) * 16
+    check_wh(fw, fh)
+    return f"{fw}x{fh}"
+
+
+def resolve_gpt_size(a):
+    if a.resolution:
+        if a.size and a.size != "auto":
+            sys.exit("--resolution 与 --size 不能同时使用（--resolution 需搭配 --ratio）")
+        return size_from_resolution(a.resolution, a.ratio)
+    s = a.size
+    if not s or s == "auto" or s in GPT_RATIOS or s in GPT_PRESETS:
+        return s
+    if "x" in s:
+        try:
+            w, h = (int(x) for x in s.lower().split("x"))
+        except ValueError:
+            sys.exit(f"无法识别的 --size: {s}")
+        check_wh(w, h)
+        return s
+    sys.exit(f"无法识别的 --size: {s}（可用 auto、比例 {'/'.join(GPT_RATIOS)}、或 WxH）")
+
+
 def cmd_image(a):
     body = {"model": a.model, "prompt": a.prompt, "quality": a.quality, "background": a.background}
-    if a.size:
-        body["size"] = a.size
+    if len(a.prompt) > 5000:
+        sys.exit(f"提示词 {len(a.prompt)} 字符，超过 5000 上限")
+    size = resolve_gpt_size(a)
+    if size:
+        body["size"] = size
+    if a.extra:
+        try:
+            extra = json.loads(a.extra)
+            assert isinstance(extra, dict)
+        except (ValueError, AssertionError):
+            sys.exit("--extra 必须是 JSON 对象，例如 '{\"callback_url\": \"https://...\"}'")
+        body.update(extra)
     if a.image:
         body["image"] = resolve_images(a.image, a.dry_run)
     run_task("/v1/images/generations?async=true", body, a, "/v1/tasks/{id}", "image", IMG_EXT)
@@ -283,9 +351,13 @@ def main():
     s.add_argument("--model", default="gpt-image-2",
                    choices=["gpt-image-2", "gpt-image-2.5-flare", "gpt-image-2.5-sunburst",
                             "gpt-image-2.6-flare", "gpt-image-2.6-sunburst"])
-    s.add_argument("--size", help="auto | 1024x1024 | 16:9 | 自定义WxH(需被16整除) ...")
+    s.add_argument("--size", help="auto | 比例(16:9 等) | 1024x1024 | 自定义WxH（会校验：被16整除、每边16–3840、总像素655,360–8,294,400）")
+    s.add_argument("--resolution", choices=["1k", "2k", "4k"],
+                   help="按分辨率档位自动算尺寸（长边 1024/2048/3840），搭配 --ratio；超出像素预算时自动等比缩小")
+    s.add_argument("--ratio", default="1:1", choices=list(GPT_RATIOS), help="配合 --resolution 使用，默认 1:1")
     s.add_argument("--quality", default="medium", choices=["low", "medium", "high"])
     s.add_argument("--background", default="auto", choices=["auto", "opaque", "transparent"])
+    s.add_argument("--extra", help='额外字段 JSON，原样并入请求体，如 \'{"callback_url":"https://..."}\'')
     s.add_argument("--webp", action="store_true")
     s.set_defaults(f=cmd_image)
 

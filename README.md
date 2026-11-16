@@ -68,6 +68,10 @@ python3 $S image "换成穿红色外套的女性" --image ./a.png
 # 透明背景
 python3 $S image "产品贴纸风格的咖啡杯" --background transparent
 
+# 4K 横图 / 指定新模型
+python3 $S image "雪山日出，电影感" --resolution 4k --ratio 16:9 --quality high
+python3 $S image "产品海报" --model gpt-image-2.6-sunburst --size 3:4
+
 # nano-banana 文生图 / 改图（有 --image 自动走 edit 接口）
 python3 $S nano "黄昏的郊区庭院" --aspect-ratio 16:9 --image-size 2K
 python3 $S nano "改成真实照片风格" --image ./cartoon.png
@@ -91,7 +95,11 @@ python3 $S image "test" --dry-run
 
 ## 参数限制（摘自官方文档）
 
-- **image**：`--size` 可用 `auto`、`1024x1024`、`1792x1024`、`1024x1792` 或比例（`16:9`、`9:16`、`4:3` 等）；自定义 `WxH` 两边都要能被 16 整除，每边 16–3840，总像素 655,360–8,294,400。提示词最长 5000 字符。
+- **image**：
+  - `--size` 可用 `auto`、`1024x1024`、`1792x1024`、`1024x1792` 或比例（`16:9`、`9:16`、`4:3` 等）；自定义 `WxH` 两边都要能被 16 整除，每边 16–3840，总像素 655,360–8,294,400，脚本会先本地校验。
+  - `--resolution 1k|2k|4k` + `--ratio`：按长边 1024 / 2048 / 3840 自动算出合法尺寸，超出像素预算时等比缩小（`4k`+`16:9` → 3840x2160，`4k`+`1:1` → 2880x2880）。
+  - `--extra '{"callback_url":"..."}'`：额外字段原样并入请求体（官方文档示例里出现过 `callback_url`、`oversea`、`output_format` 等，但接口说明未正式定义，属未验证用法）。
+  - 提示词最长 5000 字符。
 - **nano**：`--image-size` 的 K 必须大写；参考图最多 10 张，只支持 URL（传本地路径会自动上传）。
 - **video**：时长固定 8 秒；`REFERENCE` 模式最多 3 张图，且不支持 9:16；`FIRST&LAST` 可传 1–2 张图。
 

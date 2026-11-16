@@ -35,6 +35,10 @@ python3 $S image "换成穿红色外套的女性" --image https://example.com/a.
 # 透明背景
 python3 $S image "产品贴纸风格的咖啡杯" --background transparent
 
+# 4K 横图（自动算出 3840x2160）/ 指定新模型
+python3 $S image "雪山日出，电影感" --resolution 4k --ratio 16:9 --quality high
+python3 $S image "产品海报" --model gpt-image-2.6-sunburst --size 3:4
+
 # nano-banana 文生图 / 改图（有 --image 自动走 edit 接口）
 python3 $S nano "黄昏的郊区庭院，石板小径" --aspect-ratio 16:9 --image-size 2K
 python3 $S nano "把天空改成日落" --image https://example.com/a.jpg
@@ -51,10 +55,13 @@ python3 $S video "人物走向镜头" --image https://example.com/first.png --ge
 ## 参数要点
 
 **image（gpt-image-2 系列）**
-- 模型：`gpt-image-2`、`gpt-image-2.5-flare`（更快）、`gpt-image-2.5-sunburst`（更高级）、`gpt-image-2.6-flare`、`gpt-image-2.6-sunburst`
-- `--size`：`auto`、`1024x1024`、`1792x1024`、`1024x1792`，或比例 `1:1 3:2 2:3 16:9 9:16 1:2 2:1 4:3 3:4 5:4 4:5`；自定义 `WxH` 要求两边都能被 16 整除，每边 16–3840，总像素 655,360–8,294,400（4K 可用）
+- 模型（`--model`）：`gpt-image-2`（默认）、`gpt-image-2.5-flare`（替代 image 2 的新模型，速度约快一倍）、`gpt-image-2.5-sunburst`（更高级）、`gpt-image-2.6-flare`、`gpt-image-2.6-sunburst`
+- 尺寸二选一：
+  - `--size`：`auto`、`1024x1024`、`1792x1024`、`1024x1792`、比例（`1:1 3:2 2:3 16:9 9:16 1:2 2:1 4:3 3:4 5:4 4:5`），或自定义 `WxH`。自定义会先本地校验：宽高都能被 16 整除、每边 16–3840、总像素 655,360–8,294,400，不合法直接报错，不会浪费一次调用
+  - `--resolution 1k|2k|4k` 加 `--ratio`（默认 1:1）：脚本按长边 1024/2048/3840 自动算出合法尺寸，超出像素预算时等比缩小。例：`4k` + `16:9` → 3840x2160；`4k` + `1:1` → 2880x2880；`4k` + `3:4` → 2480x3312。不能和 `--size` 同时用
 - `--quality`：low / medium（默认）/ high；`--background`：auto / opaque / transparent
-- 提示词最长 5000 字符
+- `--extra '{"字段":值}'`：把任意额外字段原样并入请求体（文档示例里出现过 `callback_url`、`oversea`、`output_format`、`frame_count`、`frame_duration_ms` 等，但接口说明里没有正式定义，属于未验证的用法）
+- 提示词最长 5000 字符，超长会本地报错
 
 **nano**
 - 模型：`gemini-2.5-flash-image`、`gemini-3-pro-image-preview`
