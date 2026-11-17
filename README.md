@@ -1,5 +1,5 @@
 # duomi-nano-banana-pro
-## [多米api，](https://duomiapi.com/type/all)是可以生图、音乐、视频的稳定接口，价格很低。
+## [多米api，](https://duomiapi.com/type/all)是可以生图、音乐、视频的稳定接口，价格很低。nano banana最低5分钱一张
 ## 欢迎通过这个链接注册我有返佣
 ## https://duomiapi.com/user/register?cps=oxFljTjF
 
