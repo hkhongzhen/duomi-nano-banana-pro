@@ -1,4 +1,12 @@
 # duomi-nano-banana-pro
+## [多米api，](https://duomiapi.com/type/all)是可以生图、音乐、视频的稳定接口，价格很低。
+## 欢迎通过这个链接注册我有返佣
+## https://duomiapi.com/user/register?cps=oxFljTjF
+
+## 本skill用Claude code，其他agent也通用。
+<img width="1476" height="1231" alt="image" src="https://github.com/user-attachments/assets/1c3072fa-612b-48ca-bd74-4e53343b5e28" />
+
+
 
 一个 [Claude Code](https://claude.com/claude-code) Skill：通过 [duomiapi.com](https://duomiapi.com) 用一句提示词生成 / 编辑 AI 图片和视频。
 
